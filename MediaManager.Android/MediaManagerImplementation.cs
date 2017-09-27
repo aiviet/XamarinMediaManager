@@ -25,7 +25,14 @@ namespace Plugin.MediaManager
             set { _audioPlayer = value; }
         }
 
-        public override IVideoPlayer VideoPlayer { get; set; } = new VideoPlayerImplementation();
+        //public override IVideoPlayer VideoPlayer { get; set; } = new VideoPlayerImplementation();
+
+        private IVideoPlayer _videoPlayer;
+        public override IVideoPlayer VideoPlayer
+        {
+            get { return _videoPlayer ?? (_videoPlayer = new VideoPlayerImplementation()); }
+            set { _videoPlayer = value; }
+        }
 
         public override IMediaNotificationManager MediaNotificationManager
         {

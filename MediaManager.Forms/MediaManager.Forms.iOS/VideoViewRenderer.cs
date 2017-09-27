@@ -59,7 +59,7 @@ namespace Plugin.MediaManager.Forms.iOS
                 if (gesture is TapGestureRecognizer)
                 {
                     tapGestureToTransfer = gesture as TapGestureRecognizer;
-                    break;
+                    //break;
                 }
             }
 

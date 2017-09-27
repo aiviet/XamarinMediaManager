@@ -274,6 +274,17 @@ namespace Plugin.MediaManager
             throw new NotImplementedException();
         }
 
+        public bool IsMuted
+        {
+            get;
+            set;
+        }
+
+        public void SetVolume(float leftVolume, float rightVolume)
+        {
+            throw new NotImplementedException();
+        }
+
         public Task<bool> SetTrack(int trackIndex)
         {
             throw new NotImplementedException();

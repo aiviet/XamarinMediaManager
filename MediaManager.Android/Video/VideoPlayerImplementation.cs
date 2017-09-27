@@ -1,13 +1,13 @@
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
-using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
+using Android.App;
+using Android.Content;
 using Android.Media;
 using Android.OS;
 using Android.Runtime;
-using Android.Text.Format;
 using Android.Widget;
 using Java.Lang;
 using Java.Util.Concurrent;
@@ -25,14 +25,19 @@ namespace Plugin.MediaManager
         MediaPlayer.IOnErrorListener,
         MediaPlayer.IOnPreparedListener,
         MediaPlayer.IOnInfoListener
-    {
+    {        
+        private MediaPlayer _mediaPlayer;
+        private AudioManager _audioManager = null;
+
         public VideoPlayerImplementation()
         {
-            _status = MediaPlayerStatus.Stopped;
-			StatusChanged += (sender, args) => OnPlayingHandler(args);
-        }
+            _audioManager = (AudioManager)Application.Context.GetSystemService(Context.AudioService);
 
-		private bool isPlayerReady = false;        
+            _status = MediaPlayerStatus.Stopped;
+			StatusChanged += (sender, args) => OnPlayingHandler(args);            
+        }        
+
+        private bool isPlayerReady = false;        
 
         private IScheduledExecutorService _executorService = Executors.NewSingleThreadScheduledExecutor();
 		private IScheduledFuture _scheduledFuture;
@@ -138,7 +143,51 @@ namespace Plugin.MediaManager
             int trackIndex = _mediaPlayer.GetSelectedTrack(ToMediaTrackTypeAndroid(trackType));
             return trackIndex;
         }
-        
+
+        private bool _IsMuted = false;
+        public bool IsMuted
+        {
+            get { return _IsMuted; }
+            set
+            {
+                if (_IsMuted == value)
+                    return;
+
+                float volumeValue = 0.0f;
+                if (!value)
+                {
+                    //https://developer.xamarin.com/api/member/Android.Media.AudioManager.GetStreamVolume/p/Android.Media.Stream/
+                    //https://stackoverflow.com/questions/17898382/audiomanager-getstreamvolumeaudiomanager-stream-music-returns-0
+                    Stream streamType = Stream.Music;
+                    int volumeMax = _audioManager.GetStreamMaxVolume(streamType);
+                    int volume = _audioManager.GetStreamVolume(streamType);
+
+                    //ltang: Unmute with the current volume
+                    volumeValue = (float) volume / volumeMax;
+                }
+
+                SetVolume(volumeValue, volumeValue);
+                _IsMuted = value;
+            }
+        }
+
+        public void SetVolume(float leftVolume, float rightVolume)
+        {
+            try
+            {
+                _mediaPlayer?.SetVolume(leftVolume, rightVolume);
+            }
+            catch (Java.Lang.IllegalStateException e)
+            {
+                //ltang: Wrong state to set volume
+                throw;
+            }
+            catch (System.Exception e)
+            {                
+                throw;
+            }            
+        }
+
         private int? _lastSelectedTrackIndex = null;
         /// <summary>
         /// Do NOT call this in UI thread otherwise it will freeze the video rendering
@@ -147,19 +196,19 @@ namespace Plugin.MediaManager
         /// <returns></returns>
         public Task<bool> SetTrack(int trackIndex)
         {
-            return Task.Run<bool>(() =>
-            {
-                if (_lastSelectedTrackIndex != null && _lastSelectedTrackIndex == trackIndex)
-                    return true;
-                if (_mediaPlayer == null)
-                    return false;
+            if (_mediaPlayer == null || trackIndex < 0)
+                return Task.FromResult(false);            
+            if (_lastSelectedTrackIndex != null && _lastSelectedTrackIndex == trackIndex)
+                return Task.FromResult(true);
+            var task = Task.Run<bool>(() =>
+            {                
                 try
                 {
                     int count = TrackCount;
                     if (count <= 0 || trackIndex >= count)
                         return false;
 
-                    _mediaPlayer.SelectTrack(trackIndex);
+                    _mediaPlayer?.SelectTrack(trackIndex);
 
                     //Console.WriteLine($"SelectTrack to {trackIndex}");
 
@@ -167,15 +216,14 @@ namespace Plugin.MediaManager
 
                     return true;
                 }
-                catch
+                catch (System.Exception ex)
                 {
                     throw;
                 }
             });
+            return task;
         }
-        #endregion
-
-        private MediaPlayer _mediaPlayer;
+        #endregion      
 
         public IMediaFile CurrentFile { get; set; }
         private Android.Net.Uri currentUri { get; set; }
@@ -300,8 +348,10 @@ namespace Plugin.MediaManager
             if (mediaFile != null && CurrentFile != mediaFile)
             {
                 CurrentFile = mediaFile;
-                currentUri = Android.Net.Uri.Parse(mediaFile.Url);
-				VideoViewCanvas.StopPlayback();
+                
+                currentUri = mediaFile.CreateUri();
+
+                VideoViewCanvas.StopPlayback();
 				//VideoViewCanvas.Suspend();
 				Status = MediaPlayerStatus.Stopped;
             }
@@ -368,13 +418,11 @@ namespace Plugin.MediaManager
         public void OnPrepared(MediaPlayer mp)
         {
             Console.WriteLine($"OnPrepared: {Status}");
-            
-            if (_mediaPlayer == null)
-            {
-                _mediaPlayer = mp;
-                List<IMediaTrackInfo> temp = ExtractTrackInfo(_mediaPlayer);
-                _TrackInfoList = temp == null ? null : new ReadOnlyCollection<IMediaTrackInfo>(temp);
-            }
+
+            //ltang: Store _mediaPlayer and extract track info
+            _mediaPlayer = mp;            
+            List<IMediaTrackInfo> temp = ExtractTrackInfo(_mediaPlayer);
+            _TrackInfoList = temp == null ? null : new ReadOnlyCollection<IMediaTrackInfo>(temp);
 
             if (Status == MediaPlayerStatus.Buffering)
             {
@@ -419,9 +467,9 @@ namespace Plugin.MediaManager
 			}
 
 			return true;
-        }        
+        }
 
-        #region Helpers
+        #region Helpers        
         private static List<IMediaTrackInfo> ExtractTrackInfo(MediaPlayer mp)
         {            
             if (mp == null)
@@ -438,7 +486,6 @@ namespace Plugin.MediaManager
                 for (int i = 0; i < tracks.Length; i++)
                 {
                     MediaPlayer.TrackInfo track = tracks[i];
-
                     
                     var audioTrack = new MediaTrackInfo()
                     {

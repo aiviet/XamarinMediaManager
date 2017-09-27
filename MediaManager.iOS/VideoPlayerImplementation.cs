@@ -210,7 +210,9 @@ namespace Plugin.MediaManager
         public async Task Play(IMediaFile mediaFile = null)
         {
             if (mediaFile != null)
-                nsUrl = new NSUrl(mediaFile.Url);
+            {                
+                nsUrl = mediaFile.CreateUri();
+            }
 
             if (Status == MediaPlayerStatus.Paused)
             {
@@ -389,7 +391,19 @@ namespace Plugin.MediaManager
                 throw;
             }
         }
-        
+
+        public bool IsMuted
+        {
+            get { return _player.Muted; }
+            set { _player.Muted = value; }
+        }
+
+        public void SetVolume(float leftVolume, float rightVolume)
+        {
+            float volume = Math.Max(leftVolume, rightVolume);
+            _player.Volume = volume;
+        }
+
         private int? _lastSelectedTrackIndex = null;
         /// <summary>
         /// Do NOT call this in UI thread otherwise it will freeze the video rendering
@@ -398,10 +412,14 @@ namespace Plugin.MediaManager
         /// <returns></returns>
         public Task<bool> SetTrack(int trackIndex)
         {
-            return Task.Run<bool>(() =>
-            {
-                if (_lastSelectedTrackIndex != null && _lastSelectedTrackIndex == trackIndex)
-                    return true;
+            if (trackIndex < 0)
+                return Task.FromResult(false);
+
+            if (_lastSelectedTrackIndex != null && _lastSelectedTrackIndex == trackIndex)
+                return Task.FromResult(true);
+
+            var task = Task.Run<bool>(() =>
+            {                
                 try
                 {
                     int count = TrackCount;
@@ -426,6 +444,7 @@ namespace Plugin.MediaManager
                     throw;
                 }
             });
+            return task;
         }
 
         private ReadOnlyCollection<IMediaTrackInfo> _TrackInfoList;

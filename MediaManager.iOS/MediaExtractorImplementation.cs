@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using AVFoundation;
@@ -23,7 +23,7 @@ namespace Plugin.MediaManager
                     AVMetadata.CommonKeyArtwork
                 };
 
-                var url = MediaFileUrlHelper.GetUrlFor(mediaFile);
+                var url = mediaFile.CreateUri();
             
                 // Default title to filename
                 mediaFile.Metadata.Title = url.LastPathComponent;

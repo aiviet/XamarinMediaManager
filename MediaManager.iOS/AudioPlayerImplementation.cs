@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -263,7 +263,7 @@ namespace Plugin.MediaManager
 
             if (mediaFile != null)
             {
-                nsUrl = MediaFileUrlHelper.GetUrlFor(mediaFile);
+                nsUrl = mediaFile.CreateUri();
                 _currentMediaFile = mediaFile;
             }
 

@@ -1,4 +1,5 @@
-﻿using Plugin.MediaManager.Abstractions.Enums;
+using System.Diagnostics;
+using Plugin.MediaManager.Abstractions.Enums;
 using Plugin.MediaManager.Abstractions.Implementations;
 using Xamarin.Forms;
 
@@ -50,7 +51,11 @@ namespace Plugin.MediaManager.Forms
                 Url = (string)newvalue,
                 Type = MediaFileType.Video
             };
-            
+
+            video.GuessAvailability();
+
+            Debug.WriteLine($"OnSourceChanged: {video}");
+
             //Auto play by adding video to the queue and then play
             CrossMediaManager.Current.Play(video);
         }

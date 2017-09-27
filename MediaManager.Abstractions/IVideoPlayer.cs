@@ -36,5 +36,15 @@ namespace Plugin.MediaManager.Abstractions
         Task<bool> SetTrack(int trackIndex);
 
         IReadOnlyCollection<IMediaTrackInfo> TrackInfoList { get; }
+
+
+        bool IsMuted { get; set; }
+
+        /// <summary>
+        /// Volume of the video player
+        /// </summary>
+        /// <param name="leftVolume"></param>
+        /// <param name="rightVolume"></param>
+        void SetVolume(float leftVolume, float rightVolume);
     }
 }
