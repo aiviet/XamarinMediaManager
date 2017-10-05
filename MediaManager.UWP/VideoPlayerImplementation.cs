@@ -280,7 +280,7 @@ namespace Plugin.MediaManager
             set;
         }
 
-        public void SetVolume(float leftVolume, float rightVolume)
+        public bool SetVolume(float leftVolume, float rightVolume)
         {
             throw new NotImplementedException();
         }

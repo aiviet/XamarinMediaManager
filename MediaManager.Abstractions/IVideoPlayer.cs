@@ -37,7 +37,6 @@ namespace Plugin.MediaManager.Abstractions
 
         IReadOnlyCollection<IMediaTrackInfo> TrackInfoList { get; }
 
-
         bool IsMuted { get; set; }
 
         /// <summary>
@@ -45,6 +44,6 @@ namespace Plugin.MediaManager.Abstractions
         /// </summary>
         /// <param name="leftVolume"></param>
         /// <param name="rightVolume"></param>
-        void SetVolume(float leftVolume, float rightVolume);
+        bool SetVolume(float leftVolume, float rightVolume);
     }
 }

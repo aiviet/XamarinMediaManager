@@ -144,7 +144,7 @@ namespace Plugin.MediaManager
             return trackIndex;
         }
 
-        private bool _IsMuted = false;
+        private volatile bool _IsMuted = false;
         public bool IsMuted
         {
             get { return _IsMuted; }
@@ -166,26 +166,36 @@ namespace Plugin.MediaManager
                     volumeValue = (float) volume / volumeMax;
                 }
 
-                SetVolume(volumeValue, volumeValue);
-                _IsMuted = value;
+                if (SetVolume(volumeValue, volumeValue))
+                {
+                    _IsMuted = value;
+                }
+                else
+                {
+                    //ltang: Failed to mute
+                }
             }
         }
 
-        public void SetVolume(float leftVolume, float rightVolume)
+        public bool SetVolume(float leftVolume, float rightVolume)
         {
+            bool bOk = false;
             try
             {
                 _mediaPlayer?.SetVolume(leftVolume, rightVolume);
+                bOk = true;
             }
             catch (Java.Lang.IllegalStateException e)
             {
                 //ltang: Wrong state to set volume
-                throw;
+                Console.WriteLine(e);
+                //throw;
             }
             catch (System.Exception e)
             {                
                 throw;
-            }            
+            }
+            return bOk;
         }
 
         private int? _lastSelectedTrackIndex = null;
@@ -210,7 +220,7 @@ namespace Plugin.MediaManager
 
                     _mediaPlayer?.SelectTrack(trackIndex);
 
-                    //Console.WriteLine($"SelectTrack to {trackIndex}");
+                    Console.WriteLine($"SelectTrack to {trackIndex}");
 
                     _lastSelectedTrackIndex = trackIndex;
 
@@ -419,10 +429,24 @@ namespace Plugin.MediaManager
         {
             Console.WriteLine($"OnPrepared: {Status}");
 
-            //ltang: Store _mediaPlayer and extract track info
-            _mediaPlayer = mp;            
-            List<IMediaTrackInfo> temp = ExtractTrackInfo(_mediaPlayer);
-            _TrackInfoList = temp == null ? null : new ReadOnlyCollection<IMediaTrackInfo>(temp);
+            if (_mediaPlayer != mp)
+            {
+                _IsMuted = false;
+
+                //ltang: Store _mediaPlayer and extract track info
+                _mediaPlayer = mp;                
+                List<IMediaTrackInfo> temp = ExtractTrackInfo(_mediaPlayer);
+                _TrackInfoList = temp == null ? null : new ReadOnlyCollection<IMediaTrackInfo>(temp);
+
+                //ltang: Try to re-select the last track selection
+                if (_lastSelectedTrackIndex != null)
+                {
+                    int previousSelection = _lastSelectedTrackIndex.Value;
+                    _lastSelectedTrackIndex = null;
+
+                    SetTrack(previousSelection);
+                }
+            }
 
             if (Status == MediaPlayerStatus.Buffering)
             {

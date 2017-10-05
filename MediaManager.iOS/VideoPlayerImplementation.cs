@@ -177,19 +177,39 @@ namespace Plugin.MediaManager
         {
             _player = new AVPlayer();
             _videoLayer = AVPlayerLayer.FromPlayer(_player);
-
-            #if __IOS__ || __TVOS__
-            var avSession = AVAudioSession.SharedInstance();
+            
+            //#if __IOS__ || __TVOS__
+#if __IOS__ || __TVOS__
+            AVAudioSession avSession = AVAudioSession.SharedInstance();
 
             // By setting the Audio Session category to AVAudioSessionCategorPlayback,
             //audio will continue to play when the silent switch is enabled, or when the screen is locked.
-            avSession.SetCategory(AVAudioSessionCategory.Playback);
+
+            //avSession.SetCategory(AVAudioSessionCategory.Playback);
+
+            avSession.SetCategory(AVAudioSessionCategory.Playback
+                , AVAudioSessionCategoryOptions.AllowBluetooth);
+
+            //avSession.SetCategory(AVAudioSessionCategory.Playback
+            //    , AVAudioSessionCategoryOptions.AllowBluetooth
+            //      | AVAudioSessionCategoryOptions.AllowBluetoothA2DP
+            //      | AVAudioSessionCategoryOptions.AllowAirPlay);
 
             NSError activationError = null;
             avSession.SetActive(true, out activationError);
             if (activationError != null)
-                Console.WriteLine("Could not activate audio session {0}", activationError.LocalizedDescription);
-            #endif
+            {
+                string stError = $"Could not activate audio session {activationError.LocalizedDescription}";
+                Console.WriteLine(stError);
+                throw new Exception(stError);
+            }
+#if __IOS__
+            Console.WriteLine($"VideoPlayerImplementation Route: {avSession.ToText()}");
+
+            _notificationObserveRouteChange = AVAudioSession.Notifications.ObserveRouteChange(OnObserveRouteChange);
+#endif
+
+#endif
 
             Player.AddPeriodicTimeObserver(new CMTime(1, 4), DispatchQueue.MainQueue, delegate
             {
@@ -206,6 +226,21 @@ namespace Plugin.MediaManager
                     Duration));
             });            
         }
+
+#if __IOS__
+        NSObject _notificationObserveRouteChange;
+
+        private void OnObserveRouteChange(object sender, AVAudioSessionRouteChangeEventArgs args)
+        {
+            // Access strongly typed args
+            var st = new StringBuilder();
+            st.AppendLine($"Notification: {args.Notification}");
+            st.AppendLine($"Reason: {args.Reason}");
+            st.AppendLine($"Previous Route: {args.PreviousRoute.ToText()}");
+            st.AppendLine($"New Route: {AVAudioSession.SharedInstance().ToText()}");            
+            Console.WriteLine(st);            
+        }
+#endif
 
         public async Task Play(IMediaFile mediaFile = null)
         {
@@ -267,7 +302,7 @@ namespace Plugin.MediaManager
 
         public override void ObserveValue(NSString keyPath, NSObject ofObject, NSDictionary change, IntPtr context)
         {
-            Console.WriteLine("Observer triggered for {0}", keyPath);
+            //Console.WriteLine("Observer triggered for {0}", keyPath);
 
             switch ((string)keyPath)
             {
@@ -398,10 +433,11 @@ namespace Plugin.MediaManager
             set { _player.Muted = value; }
         }
 
-        public void SetVolume(float leftVolume, float rightVolume)
+        public bool SetVolume(float leftVolume, float rightVolume)
         {
             float volume = Math.Max(leftVolume, rightVolume);
             _player.Volume = volume;
+            return true;
         }
 
         private int? _lastSelectedTrackIndex = null;

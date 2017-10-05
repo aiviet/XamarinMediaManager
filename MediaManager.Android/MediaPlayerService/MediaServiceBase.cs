@@ -13,7 +13,6 @@ using Android.Support.V4.Media.Session;
 using Plugin.MediaManager.Abstractions;
 using Plugin.MediaManager.Abstractions.Enums;
 using Plugin.MediaManager.Abstractions.EventArguments;
-using Plugin.MediaManager.Abstractions.Implementations;
 using Plugin.MediaManager.Audio;
 using Plugin.MediaManager.MediaSession;
 
@@ -31,7 +30,7 @@ namespace Plugin.MediaManager
 
         internal const int NotificationId = 1;
 
-        public const int Event_Firing_MiliSec = 750;
+        public const int Event_Firing_MiliSec = 250;
 
         private WifiManager wifiManager;
         private WifiManager.WifiLock wifiLock;

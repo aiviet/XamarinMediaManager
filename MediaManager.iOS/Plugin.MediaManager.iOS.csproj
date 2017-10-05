@@ -52,6 +52,7 @@
       <Link>CrossMediaManager.cs</Link>
     </Compile>
     <Compile Include="AudioPlayerImplementation.cs" />
+    <Compile Include="AVMediaHelper.cs" />
     <Compile Include="MediaExtractorImplementation.cs" />
     <Compile Include="MediaManagerImplementation.cs" />
     <Compile Include="MediaNotificationManagerImplementation.cs" />
