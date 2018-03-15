@@ -56,6 +56,8 @@ namespace Plugin.MediaManager.Forms
 
             Debug.WriteLine($"OnSourceChanged: {video}");
 
+            CrossMediaManager.Current.MediaQueue.Clear();
+
             //Auto play by adding video to the queue and then play
             CrossMediaManager.Current.Play(video);
         }
